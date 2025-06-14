@@ -3,49 +3,23 @@ package handler
 import (
 	"net/http"
 
-	"g42-user/cmd/logic"
-	"g42-user/repositories"
+	"g42-user/cmd/handler/dto"
+	"g42-user/cmd/logic/contracts"
+	"g42-user/cmd/repositories/models"
 
 	"github.com/gin-gonic/gin"
 )
 
 type UserHandler struct {
-	userLogic *logic.UserLogic
+	userLogic contracts.UserLogic
 }
 
-func NewUserHandler(userLogic *logic.UserLogic) *UserHandler {
+func NewUserHandler(userLogic contracts.UserLogic) *UserHandler {
 	return &UserHandler{userLogic: userLogic}
 }
 
-type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
-}
-
-type SignupRequest struct {
-	Name        string `json:"name" binding:"required"`
-	Email       string `json:"email" binding:"required,email"`
-	Password    string `json:"password" binding:"required"`
-	Mobile      string `json:"mobile,omitempty"`
-	DateOfBirth string `json:"dateOfBirth,omitempty"`
-}
-
-type LoginResponse struct {
-	Token string            `json:"token"`
-	User  repositories.User `json:"user"`
-}
-
-type SignupResponse struct {
-	Message string            `json:"message"`
-	User    repositories.User `json:"user"`
-}
-
-type GetUserDetailsRequest struct {
-	Email string `json:"email" binding:"required,email"`
-}
-
 func (h *UserHandler) Login(c *gin.Context) {
-	var req LoginRequest
+	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
 		return
@@ -62,14 +36,14 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, LoginResponse{
+	c.JSON(http.StatusOK, dto.LoginResponse{
 		Token: token,
-		User:  user,
+		User:  mapModelToResponse(user),
 	})
 }
 
 func (h *UserHandler) Signup(c *gin.Context) {
-	var req SignupRequest
+	var req dto.SignupRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
 		return
@@ -83,7 +57,7 @@ func (h *UserHandler) Signup(c *gin.Context) {
 	}
 
 	// Create new user
-	user := &repositories.User{
+	user := &models.User{
 		Name:        req.Name,
 		Email:       req.Email,
 		Password:    req.Password,
@@ -96,20 +70,14 @@ func (h *UserHandler) Signup(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, SignupResponse{
+	c.JSON(http.StatusCreated, dto.SignupResponse{
 		Message: "User created successfully",
-		User:    *user,
+		User:    mapModelToResponse(*user),
 	})
 }
 
-func (h *UserHandler) Logout(c *gin.Context) {
-	// Since we're using JWT, we don't need to do anything server-side
-	// The client should remove the token
-	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
-}
-
 func (h *UserHandler) GetUserDetails(c *gin.Context) {
-	var req GetUserDetailsRequest
+	var req dto.GetUserDetailsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
 		return
@@ -135,7 +103,7 @@ func (h *UserHandler) GetUserDetails(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"user": user,
+		"user": mapModelToResponse(*user),
 	})
 }
 
@@ -166,6 +134,23 @@ func (h *UserHandler) GetUserDetailsByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"user": user,
+		"user": mapModelToResponse(*user),
 	})
+}
+
+func (h *UserHandler) Logout(c *gin.Context) {
+	// Since we're using JWT, we don't need to do anything server-side
+	// The client should remove the token
+	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+}
+
+// Helper function to map model to response DTO
+func mapModelToResponse(user models.User) dto.UserResponse {
+	return dto.UserResponse{
+		ID:          user.ID.Hex(),
+		Name:        user.Name,
+		Email:       user.Email,
+		Mobile:      user.Mobile,
+		DateOfBirth: user.DateOfBirth,
+	}
 }

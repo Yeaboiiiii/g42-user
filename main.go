@@ -6,8 +6,8 @@ import (
 
 	"g42-user/cmd/handler"
 	"g42-user/cmd/logic"
-	"g42-user/repositories"
-	"g42-user/utils"
+	"g42-user/cmd/repositories"
+	"g42-user/cmd/utils"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
